@@ -1,0 +1,37 @@
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: flaskcrud
+      MYSQL_USER: ${MYSQL_USER:?Define MYSQL_USER in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Define MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Define MYSQL_ROOT_PASSWORD in .env}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/db.sql:/docker-entrypoint-initdb.d/01-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+  web:
+    build: .
+    environment:
+      MYSQL_HOST: db
+      MYSQL_USER: ${MYSQL_USER:?Define MYSQL_USER in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Define MYSQL_PASSWORD in .env}
+      MYSQL_DB: flaskcrud
+      MYSQL_PORT: 3306
+      SECRET_KEY: ${SECRET_KEY:?Define SECRET_KEY in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  mysql_data:

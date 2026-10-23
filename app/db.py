@@ -1,20 +1,30 @@
-from app import app
-from flask_mysqldb import MySQL
-from dotenv import load_dotenv
 import os
+from contextlib import contextmanager
 
-load_dotenv()  # take environment variables from .env.
+import mysql.connector
+from dotenv import load_dotenv
 
-# Mysql Settings
-app.config['MYSQL_USER'] = os.getenv('MYSQL_USER')
-app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD')
-app.config['MYSQL_HOST'] = os.getenv('MYSQL_HOST')
-app.config['MYSQL_DB'] = os.getenv('MYSQL_DB')
-app.config['MYSQL_PORT'] = int(os.getenv('MYSQL_PORT', 3306))
-app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
+load_dotenv()
 
 
+def get_db_connection():
+    return mysql.connector.connect(
+        host=os.environ.get("MYSQL_HOST", "localhost"),
+        user=os.environ["MYSQL_USER"],
+        password=os.environ["MYSQL_PASSWORD"],
+        database=os.environ.get("MYSQL_DB", "flaskcrud"),
+        port=int(os.environ.get("MYSQL_PORT", "3306")),
+    )
 
 
-# MySQL Connection
-mysql = MySQL(app)
+@contextmanager
+def database_cursor(dictionary=True):
+    connection = get_db_connection()
+    cursor = None
+    try:
+        cursor = connection.cursor(dictionary=dictionary)
+        yield connection, cursor
+    finally:
+        if cursor is not None:
+            cursor.close()
+        connection.close()
